@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import {Container, Button, Table, Form, Card} from 'react-bootstrap';
+import {Container, Button, Table, Form, Card, FormFile} from 'react-bootstrap';
+import FileUploader from 'react-firebase-file-uploader';
 
-import { db } from '../../utils/firebaseConfig'
+import { db, storage } from '../../utils/firebaseConfig'
  
 const Eventos = () => {
     const [id, setId] = useState(0);
     const [nome, setNome] = useState('');
     const [descricao, setDescricao] = useState('');
+    const [urlImagem, setUrlImagem] = useState('');
 
     const [eventos, setEventos] = useState([]);
 
@@ -24,7 +26,8 @@ const Eventos = () => {
                         return{
                             id : doc.id,
                             nome : doc.data().nome,
-                            descricao : doc.data().descricao
+                            descricao : doc.data().descricao,
+                            urlImagem : doc.data().urlImagem
                         }
                     })
                     setEventos(data);
@@ -40,7 +43,8 @@ const Eventos = () => {
 
         const evento = {
             nome : nome,
-            descricao : descricao
+            descricao : descricao,
+            urlImagem : urlImagem
         }
 
         if (id === 0){
@@ -96,7 +100,23 @@ const Eventos = () => {
         setId(0);
         setNome('');
         setDescricao('');
-    }
+        setUrlImagem('')
+    };
+
+    const handleUploadError = error => {
+        console.error(error);
+    };
+
+    const handleUploadSuccess = filename => {
+        storage
+            .ref('imagens')
+            .child(filename)
+            .getDownloadURL()
+            .then(url => setUrlImagem(url))
+            .catch(error => console.error(error))
+
+
+    };
      
 
     return ( 
@@ -105,6 +125,22 @@ const Eventos = () => {
                 <Card>
                     <Card.Body>
                         <Form onSubmit={event => salvar(event)}>
+                            <Form.Group>
+                                {urlImagem && <img src={urlImagem} style={{width : '200px'}} /> }
+                                <label style={{backgroundColor: 'steelblue', color: 'white', padding: 10, borderRadius: 4, cursor: 'pointer'}}>
+                                    Selecione sua imagem
+                                    <FileUploader 
+                                        hidden
+                                        accept="image/*"
+                                        name="urlImagem"
+                                        storageRef={storage.ref('imagens')}
+                                        
+                                        onUploadSuccess={handleUploadSuccess}
+                                        onUploadError={handleUploadError}
+
+                                    />
+                                </label>
+                            </Form.Group>
                             <Form.Group controlId="formBasicNome">
                                 <Form.Label>Nome</Form.Label>
                                 <Form.Control type="text" value={nome} onChange={event => setNome(event.target.value)} placeholder="Nome do evento"></Form.Control>
@@ -123,6 +159,7 @@ const Eventos = () => {
                 <Table striped bordered hover>
                     <thead>
                         <tr>
+                            <th>Imagem</th>
                             <th>Nome</th>
                             <th>Descrição</th>
                             <th>Ações</th>
@@ -133,6 +170,7 @@ const Eventos = () => {
                             eventos.map((item, index) => {
                                 return (
                                     <tr key={index}>
+                                        <td><img src={item.urlImagem} style={{width : '150px'}} /> </td>
                                         <td>{item.nome}</td>
                                         <td>{item.descricao}</td>
                                         <td>
